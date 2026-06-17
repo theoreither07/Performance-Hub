@@ -1,0 +1,103 @@
+# Personal Dashboard — VPS Stack
+# Services: app (Next.js), postgres, caddy (HTTPS Reverse Proxy)
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3030:3000"
+    env_file:
+      - .env
+    # Persistente Resource-Limits — ueberleben docker compose down/up + Reboot.
+    # Verhindert dass App-Process im Notfall den VPS plattmacht.
+    cpus: 1.5
+    mem_limit: 2g
+    environment:
+      DATABASE_URL: postgresql://dashboard:${POSTGRES_PASSWORD}@postgres:5432/dashboard?schema=public
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      WEATHER_LAT: ${WEATHER_LAT:-48.2082}
+      WEATHER_LON: ${WEATHER_LON:-16.3738}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      TZ: Europe/Vienna
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+    # Shared mit dem garmin-sync Sidecar — App schreibt /data/trigger-sync,
+    # damit der Refresh-Button im UI tatsaechlich einen Sync ausloest.
+    volumes:
+      - garmin-tokens:/data
+    command: sh -c "node node_modules/prisma/build/index.js migrate deploy && node server.js"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    cpus: 1.0
+    mem_limit: 1g
+    environment:
+      POSTGRES_DB: dashboard
+      POSTGRES_USER: dashboard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Europe/Vienna
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashboard -d dashboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [app]
+    networks: [internal]
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Europe/Vienna
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+    entrypoint: ["sh", "-c", "apk add --no-cache dcron && chmod +x /usr/local/bin/backup.sh && echo '0 3 * * * /usr/local/bin/backup.sh' | crontab - && crond -f -l 8"]
+
+networks:
+  internal:
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:
+  # Externes Volume — wird vom separat gestarteten dashboard-garmin-sync Container befuellt.
+  # Wenn das Volume noch nicht existiert (z.B. bei frischem Setup), `external: true` entfernen.
+  garmin-tokens:
+    external: true
+    name: dashboard_garmin-tokens

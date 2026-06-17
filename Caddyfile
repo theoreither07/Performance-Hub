@@ -1,0 +1,26 @@
+# Caddy konfiguriert automatisch HTTPS via Lets Encrypt.
+# DOMAIN aus .env wird per envsubst nicht eingelesen — daher: direkt anpassen,
+# oder docker-compose mit $DOMAIN environment substitution nutzen.
+# Beispiel: dashboard.deine-domain.at
+
+{$DOMAIN} {
+    encode zstd gzip
+    reverse_proxy app:3000
+
+    # Sicherheits-Header
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    }
+
+    # PWA-Assets etwas laenger cachen
+    @static path /icons/* /_next/static/* /manifest.webmanifest
+    header @static Cache-Control "public, max-age=31536000, immutable"
+
+    # Service Worker NIE cachen
+    @sw path /sw.js
+    header @sw Cache-Control "no-store"
+}

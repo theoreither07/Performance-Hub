@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+
+# Production
+.next/
+out/
+build/
+dist/
+
+# Env
+.env
+.env.local
+.env*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude
+CLAUDE.local.md
+.claude/settings.local.json
+
+# DB / Backups
+*.sqlite
+*.db
+backups/
+*.dump
+*.sql
+
+# Misc
+.turbo
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Persoenliches / Owner-spezifisch — NICHT im Public-Repo
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+docs/
+deploy/
+docker-compose.vps.yml
+ERSTE_SCHRITTE.md

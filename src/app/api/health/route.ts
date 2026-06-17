@@ -1,0 +1,11 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db/prisma";
+
+export async function GET() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return NextResponse.json({ status: "ok", time: new Date().toISOString() });
+  } catch (err) {
+    return NextResponse.json({ status: "degraded", error: String(err) }, { status: 503 });
+  }
+}

@@ -1,0 +1,649 @@
+// Prisma schema fuer Personal Dashboard
+// Phase 1: User, GoogleAccount, Todo, Project, ProjectTask, Category, SyncLog
+// Phase 2-4 Modelle (HealthMetric, Note, Habit, MailMessage) sind unten kommentiert.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================================================
+// Auth (Auth.js / NextAuth standard schema)
+// =========================================================
+
+// Wir nutzen JWT-Sessions ohne DB-Adapter (Auth.js v5).
+// Daher nur ein minimales User-Modell.
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  googleAccounts GoogleAccount[]
+  todos         Todo[]
+  projects      Project[]
+  syncLogs      SyncLog[]
+  journal       DailyJournal[]
+  trainingProfile TrainingProfile?
+  keyLifts      KeyLift[]
+  coachRecommendations CoachRecommendation[]
+  coachMemories CoachMemory[]
+  weeklyPlans   WeeklyPlan[]
+  coachChatMessages CoachChatMessage[]
+  longTermGoals LongTermGoal[]
+  bodyWeightEntries BodyWeightEntry[]
+  pushSubscriptions PushSubscription[]
+  vitalitySnapshots DailyVitalitySnapshot[]
+  sessionFeedbacks  WorkoutSessionFeedback[]
+  scorePredictions  ScorePrediction[]
+}
+
+// Web-Push-API Subscription pro Device
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// =========================================================
+// Google Accounts (der User hat 2: privat + business)
+// Privat = Source of Truth fuer Kalender
+// =========================================================
+
+enum GoogleAccountKind {
+  PRIVATE
+  BUSINESS
+}
+
+model GoogleAccount {
+  id            String            @id @default(cuid())
+  userId        String
+  kind          GoogleAccountKind
+  email         String            @unique
+  refreshToken  String            @db.Text
+  isPrimary     Boolean           @default(false) // true fuer Kalender-Source-of-Truth
+  scopes        String[]          // ["calendar.readonly", "gmail.readonly", ...]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendars Calendar[]
+}
+
+// Liste der Kalender pro Google-Account (eigene + geteilte).
+// Wird beim Connect und auf Anfrage gesynct.
+model Calendar {
+  id               String   @id @default(cuid())
+  googleAccountId  String
+  calendarId       String   // Google calendar ID (meist Email)
+  summary          String   // Anzeigename
+  description      String?
+  backgroundColor  String?
+  accessRole       String?
+  primary          Boolean  @default(false) // primary calendar des Accounts
+  enabled          Boolean  @default(true)  // im Dashboard anzeigen?
+  syncedAt         DateTime @default(now())
+
+  googleAccount GoogleAccount @relation(fields: [googleAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([googleAccountId, calendarId])
+  @@index([enabled])
+}
+
+// =========================================================
+// ToDos & Projekte
+// =========================================================
+
+enum LifeArea {
+  PRIVATE
+  FH
+  BUSINESS
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  WAITING
+  DONE
+  CANCELLED
+}
+
+model Todo {
+  id              String     @id @default(cuid())
+  userId          String
+  area            LifeArea
+  title           String
+  description     String?    @db.Text
+  status          TaskStatus @default(TODO)
+  priority        Priority   @default(MEDIUM)
+  dueDate         DateTime?
+  completedAt     DateTime?
+  projectId       String?
+  // Geschaetzte Dauer in Minuten — Basis fuer automatische Wochenplanung (Phase 4)
+  estimatedMinutes Int?
+  // Offline-Sync
+  clientId    String?    @unique // ID, die der Client beim Anlegen offline vergibt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  tags    Tag[]    @relation("TodoTags")
+
+  @@index([userId, area, status])
+  @@index([userId, dueDate])
+}
+
+model Project {
+  id           String    @id @default(cuid())
+  userId       String
+  area         LifeArea
+  name         String
+  description  String?   @db.Text
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  color        String?   // hex
+  icon         String?   // lucide icon name
+  status       TaskStatus @default(IN_PROGRESS)
+  startDate    DateTime?
+  dueDate      DateTime?
+  clientId     String?   @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todos Todo[]
+
+  @@index([userId, area, status])
+}
+
+model Tag {
+  id     String @id @default(cuid())
+  name   String @unique
+  color  String?
+  todos  Todo[] @relation("TodoTags")
+}
+
+// =========================================================
+// Sync Log — fuer Audit & Conflict Resolution
+// =========================================================
+
+enum SyncOperation {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model SyncLog {
+  id          String        @id @default(cuid())
+  userId      String
+  entity      String        // "todo", "project", ...
+  entityId    String
+  operation   SyncOperation
+  payload     Json
+  clientId    String?
+  syncedAt    DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, syncedAt])
+  @@index([entity, entityId])
+}
+
+// =========================================================
+// Advice (Kevin Kelly Aphorismen)
+// =========================================================
+
+model Advice {
+  id        Int      @id @default(autoincrement())
+  text      String   @db.Text
+  category  String?
+  source    String   @default("Kevin Kelly — Excellent Advice for Living")
+  createdAt DateTime @default(now())
+
+  @@index([category])
+}
+
+// =========================================================
+// Phase 2: Health (Garmin)
+// =========================================================
+
+// Eine Zeile pro (date, kind). Wird vom Python-Sidecar-Container befuellt.
+model HealthMetric {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date
+  kind      String   // hrv_overnight, sleep_minutes, sleep_score, body_battery_high, body_battery_low, rhr, vo2max, stress_avg, steps, calories, training_readiness
+  value     Float
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@unique([date, kind])
+  @@index([kind, date])
+}
+
+// Audit / Status fuer den Garmin-Sync.
+model GarminSyncRun {
+  id        Int      @id @default(autoincrement())
+  startedAt DateTime @default(now())
+  finishedAt DateTime?
+  success   Boolean  @default(false)
+  metricsWritten Int @default(0)
+  error     String?  @db.Text
+}
+
+// Workouts / Trainings (Garmin Activities oder manuell eingetragen)
+model WorkoutSession {
+  id              String   @id @default(cuid())
+  garminActivityId BigInt? @unique  // Garmin activityId, null wenn manuell
+  date            DateTime @db.Date
+  // startTime ist timestamptz (Phase-4 Migration Juni 2026) — keine TZ-Drift mehr.
+  // Python-Sync schreibt mit explizitem Europe/Vienna TZ.
+  startTime       DateTime @db.Timestamptz(3)
+  type            String   // running, cycling, strength, yoga, swimming, hiking, other
+  name            String?  // Aktivitaetsname
+  durationSec     Int
+  distanceM       Float?
+  calories        Float?
+  avgHr           Float?
+  maxHr           Float?
+  avgPower        Float?
+  trainingLoad    Float?   // Garmin Training Load (TRIMP-aehnlich)
+  aerobicEffect   Float?   // 0.0 - 5.0
+  anaerobicEffect Float?   // 0.0 - 5.0
+  hrZones         Json?    // {zone1: seconds, zone2: seconds, ...}
+  // Subjektives Workout-Feedback fuer den Coach
+  rpe             Int?     // Rate of Perceived Exertion 1-10
+  feeling         Int?     // Gefuehl 1-10 (vs RPE: subjektive Bewertung)
+  notes           String?  @db.Text
+  source          String   @default("garmin") // garmin | manual
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  detail          WorkoutDetail?
+
+  @@index([date])
+  @@index([type, date])
+}
+
+// Trainingsplan + Ziele — Input fuer den KI-Trainer
+// Single-Row pro User (uniq via userId)
+model TrainingProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  // Wochenziele
+  strengthPerWeek Int      @default(0) // Anzahl Krafttraining/Woche
+  runsPerWeek     Int      @default(0) // Anzahl Laeufe/Woche
+  longRunKm       Float?   // Distanz langer Lauf
+  shortRunKm      Float?   // Distanz kuerzere Laeufe
+  // Free-Form-Goals (z.B. "VO2max steigern, abnehmen, staerker werden")
+  goals           String?  @db.Text
+  // Optional: strukturierter Plan (JSON, beliebige Struktur fuer den AI-Coach)
+  weeklyPlan      Json?
+  // Pace / HR Zones falls bekannt
+  maxHr           Int?
+  // Bevorzugte Pausetage (1=Mo, 2=Di, ..., 7=So). Default leer = keine Restriktion.
+  restDays        Int[]    @default([])
+  // Tagesziele (sichtbar im Home-Widget als Progress)
+  dailyCaloriesGoal Int?   // z.B. 3000 Gesamtverbrauch
+  dailyStepsGoal    Int?   // z.B. 15000 Schritte
+  notes           String?  @db.Text
+  // Bevorzugte Zeitfenster fuer Trainings (Wochenplaner Phase 1). JSON-Struktur:
+  // { morningStart: "06:30", morningEnd: "08:30",
+  //   noonPreferred: "13:30", noonFallbacks: ["11:00","16:00"],
+  //   satLongStart: "09:00", satLongEnd: "12:00",
+  //   sundayLightOnly: true }
+  weeklySlotPrefs Json?
+  // Aktuelles Trainings-Setup als Markdown — Referenz fuer den Coach (Splits, Cardio-Volumen,
+  // Default-Uebungen mit Reps). Pflegt der User in /settings. KEIN Plan, nur Referenz "so trainiere ich gerade".
+  weeklyTemplateMarkdown String? @db.Text
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Key-Lifts — Strength-PRs fuer den Coach (Bankdruecken, Klimmzuege, Military Press, Deadlift, Leg Press, ...)
+model KeyLift {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  unit        String   @default("kg")  // kg | reps | bw (bodyweight)
+  current     Float?   // aktueller Wert (kg fuer Last, Anzahl fuer Reps)
+  currentReps Int?     // optional Reps zum Last-Wert ("100kg @ 5 reps")
+  bestEver    Float?   // PR
+  notes       String?  @db.Text         // z.B. "kein Squat wegen Rueckenproblemen"
+  sortOrder   Int      @default(0)
+  archived    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId, archived])
+}
+
+// KI-Coach: Empfehlung pro Tag, generiert frueh + bei manuellem Trigger.
+model CoachRecommendation {
+  id            String   @id @default(cuid())
+  userId        String
+  date          DateTime @db.Date
+  generatedAt   DateTime @default(now())
+  provider      String   // nvidia | anthropic | error
+  model         String
+  // Strukturierte Felder fuer UI (legacy + neu)
+  morningText   String?  @db.Text  // (legacy) Empfehlung am Morgen
+  trainingPlan  String?  @db.Text  // (legacy) konkrete Trainingsanweisung
+  watchOuts     String?  @db.Text  // (legacy) worauf achten
+  afterTraining String?  @db.Text  // (legacy) Feedback nach absolviertem Training
+  // Neue situational Sektionen (Tageszeit + Trainings-Status aware)
+  statusFocus   String?  @db.Text  // tiefe Analyse: was sagen die Daten, was ist der Fokus jetzt
+  actionsNow    String?  @db.Text  // konkrete Aktionen fuer den Rest des Tages
+  eveningPrep   String?  @db.Text  // Heute Abend: Schlaf, Ernaehrung, Recovery-Tactics
+  tomorrowSetup String?  @db.Text  // Setup fuer morgen + naechste 2-3 Tage (wenn relevant)
+  phase         String?  // morning | midday | evening (Zeitpunkt bei Generierung)
+  adjustedScore Int?     // KI-adjustierter Day-Score 0-100
+  adjustedLevel String?  // recover|easy|moderate|hard
+  // Intensitaets-Indikator vom AI Coach 0-10
+  strengthIntensity Float? // 0-10
+  cardioIntensity   Float? // 0-10
+  intensityReason   String? @db.Text
+  rawContext    Json?    // was wir der KI mitgegeben haben (debugging)
+  rawResponse   String?  @db.Text // ganzer LLM-Output
+  errorMessage  String?  @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// KI-Coach: Wochenplan — Sonntag-Abend-Routine, plant kommende Woche
+model WeeklyPlan {
+  id            String   @id @default(cuid())
+  userId        String
+  weekStart     DateTime @db.Date // Montag der geplanten Woche
+  generatedAt   DateTime @default(now())
+  provider      String
+  model         String
+  // Strukturierte Inhalte
+  weekOverview  String?  @db.Text // High-Level: Fokus der Woche, Status, Volumen-Adjust
+  schedule      String?  @db.Text // Mo-So konkreter Plan (Markdown-Tabelle/Bullets)
+  watchouts     String?  @db.Text // Worauf achten, Adaptionsregeln
+  // Phase 2: strukturierte Slot-Vorschlaege fuer den Wochenplaner-View.
+  // Shape (Array): [{ date, dow, sessions: [{ start, end, type, title, focus,
+  //   exercises: [{name, sets, reps, intensity, notes}],
+  //   distanceKm, durationMin, zone,
+  //   reasoning, conflicts }] }]
+  proposedSlots Json?
+  // Phase 2: Status des Drafts. Default "draft" - Phase 4 wird "applied" markieren wenn in Kalender geschrieben.
+  status        String   @default("draft") // draft | approved | applied
+  rawResponse   String?  @db.Text
+  errorMessage  String?  @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@index([userId, weekStart])
+}
+
+// KI-Coach: Chat — Konversation zwischen der User und dem Coach
+model CoachChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // user | assistant
+  content   String   @db.Text
+  // Optional: vom Coach in dieser Nachricht ausgeloeste Aktionen (memory/adjust) als Hinweis fuer UI
+  actions   Json?
+  // Optionaler Thread-Bezug: null = allgemeiner Coach-Chat (Floating-Bubble), "week-plan" = Wochenplan-Diskussion
+  topic     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, topic, createdAt])
+}
+
+// Gewichts-Tracking — pro Tag ein Eintrag, Coach sieht's automatisch.
+model BodyWeightEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date
+  weightKg  Float
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// Langfrist-Ziele (Race, Gewicht, VO2max, 5km-TT) — Coach periodisiert das Training daraus.
+// HM-Sub-1:40 Periodisierung: Base 4w → Build 4w → Peak 2w → Sharpen 1w → Taper 1w (Standard 12w).
+model LongTermGoal {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // "race", "weight", "vo2max", "5km_tt", "10km_tt"
+  name        String   // "Halbmarathon Wien 2026"
+  targetValue Float?   // 100 (=1h40min), 75 (kg), 56 (ml/min/kg), 22.5 (min)
+  targetUnit  String?  // "min", "kg", "ml/min/kg"
+  targetDate  DateTime @db.Date
+  startDate   DateTime @db.Date @default(now())
+  startValue  Float?   // Ausgangswert (Gewicht/VO2/Zeit) zur Trend-Berechnung
+  active      Boolean  @default(true)
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active])
+  @@index([userId, targetDate])
+}
+
+// KI-Coach: Memory — KI legt Zusammenfassungen ab und liest sie bei jedem Run.
+model CoachMemory {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String   // weekly-summary, monthly-summary, training-pattern, recent-context, ...
+  content   String   @db.Text  // Markdown
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+}
+
+// Tagebuch: subjektives Feedback pro Tag
+model DailyJournal {
+  id            String   @id @default(cuid())
+  userId        String
+  date          DateTime @db.Date
+  mood          Int?     // 1-10
+  energy        Int?     // 1-10
+  motivation    Int?     // 1-10
+  soreness      Int?     // 1-10 (10 = stark verspannt)
+  workoutFelt   Int?     // 1-10 wie sich Workout angefuehlt hat
+  sleepQuality  Int?     // 1-10 (subjektiv, neben Garmin-Score)
+  ateWell       Boolean?
+  alcoholDrinks Int?
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// =========================================================
+// Phase 4: Habit Tracker
+// =========================================================
+
+model Habit {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+  icon          String?  // lucide icon name
+  color         String?  // hex
+  targetPerWeek Int      @default(7)
+  archived      Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  entries HabitEntry[]
+
+  @@index([userId, archived])
+}
+
+model HabitEntry {
+  id        String   @id @default(cuid())
+  habitId   String
+  date      DateTime @db.Date
+  note      String?
+  value     Float?
+  createdAt DateTime @default(now())
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([date])
+}
+
+// =========================================================
+// Activity-Details — vom Garmin pro Activity holbar: Splits, HF-Curve, Cadence-Drift.
+// Wir laden das LAZY pro Workout (nicht jedes Mal beim Sync), und nur on-demand
+// (Coach-Feedback braucht Details). Spart Garmin-API-Calls.
+// =========================================================
+model WorkoutDetail {
+  id                String   @id @default(cuid())
+  workoutId         String   @unique
+  // Laps/Splits — JSON-Array von {lap, durationSec, distanceM, avgHr, maxHr, avgPace, avgCadence, elevGain}
+  laps              Json?
+  // Stuendliche HF-Drift: avgHR pro 5min-Window — JSON-Array von {tSec, hr}
+  hrCurve           Json?
+  // Cadence pro 5min: JSON-Array von {tSec, cadence}
+  cadenceCurve      Json?
+  // Highest HR + when (tSec from start)
+  hrMaxAt           Int?
+  // Pace-Drift: erste vs letzte Quartile, %
+  paceDriftPct      Float?
+  // Cadence-Drift: erste vs letzte Quartile
+  cadenceDriftPct   Float?
+  // Time-in-Zone als Map: { z1: sec, z2: sec, z3: sec, z4: sec, z5: sec }
+  timeInZone        Json?
+  // Roh-Garmin-Details als Backup
+  rawGarminData     Json?
+  fetchedAt         DateTime @default(now())
+
+  workout WorkoutSession @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([workoutId])
+}
+
+// =========================================================
+// Score-Prediction-Tracking (Outcomes-Loop für Self-Learning).
+// Bei jedem morgendlichen Score-Compute speichern wir die Prediction.
+// Bei jedem Workout-Done wird actual outcome gelogged.
+// Wöchentlich vergleichen wir Vorhersage vs Reality → personalized weights.
+// =========================================================
+model ScorePrediction {
+  id                String   @id @default(cuid())
+  userId            String
+  date              DateTime @db.Date
+  predictedReadiness Int     // 0-100
+  predictedLevel    String   // recover/easy/moderate/hard
+  vitalityStart     Int?     // Live-Vitality 06:00
+  vitalityEnd       Int?     // 22:30 (persistiert)
+  // Outcome-Felder (befüllt nach Workouts/Journal des Tages)
+  actualRpe         Float?   // gemittelt aus Workouts
+  actualFeeling     Int?     // 1-5 aus Journal
+  workoutCount      Int      @default(0)
+  workoutMinutes    Int      @default(0)
+  workoutLoad       Float    @default(0)
+  // Berechnete Quality-Metriken
+  predictionError   Float?   // |predictedReadiness - performance|
+  computedAt        DateTime @default(now())
+  factors           Json?    // Snapshot der Score-Components
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+// =========================================================
+// Coach-Analyse nach Workout-Done: persistiert pro Plan-Session.
+// Damit der User die Analyse auch nach Reload sieht.
+// =========================================================
+model WorkoutSessionFeedback {
+  id              String   @id @default(cuid())
+  userId          String
+  sessionDate     DateTime @db.Date
+  sessionTitle    String
+  sessionType     String   // strength / cardio / long_cardio / mobility
+  plannedIntensity Int?
+  workoutId       String?  // WorkoutSession.id wenn zugewiesen
+  noTracker       Boolean  @default(false)
+  headline        String
+  bullets         Json     // string[]
+  nextSetup       String?
+  provider        String?
+  model           String?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionDate, sessionTitle])
+  @@index([sessionDate])
+  @@index([userId, sessionDate])
+}
+
+// =========================================================
+// Live-Vitality End-of-Day Snapshot — fließt als Carry-Over in morgige Bereitschaft.
+// =========================================================
+model DailyVitalitySnapshot {
+  id         String   @id @default(cuid())
+  userId     String
+  date       DateTime @db.Date
+  endScore   Int      // 0-100
+  computedAt DateTime @default(now())
+  factors    Json?    // VitalityFactor[] aus computeLiveVitality
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+// =========================================================
+// Phase 3-4 (vorbereitet, noch nicht aktiv genutzt)
+// =========================================================
+// model Note { ... }
+// model MailMessage { ... } // Cache fuer Gmail-Inbox

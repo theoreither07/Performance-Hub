@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 6%;
+    --primary: 76 100% 50%;          /* Brand accent (Lime) */
+    --primary-foreground: 0 0% 6%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 0 0% 6%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 6%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 76 100% 50%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 0 0% 6%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 11%;             /* opake Dropdown-Flaeche, etwas heller als card */
+    --popover-foreground: 0 0% 98%;
+    --primary: 76 100% 50%;
+    --primary-foreground: 0 0% 6%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 76 100% 50%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+}
+
+/* === Animations === */
+
+@keyframes checkbox-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.animate-checkbox-pop { animation: checkbox-pop 280ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes check-draw {
+  from { stroke-dashoffset: 16; opacity: 0; }
+  to   { stroke-dashoffset: 0;  opacity: 1; }
+}
+.animate-check-draw {
+  stroke-dasharray: 16;
+  animation: check-draw 220ms ease-out forwards;
+}
+
+@keyframes todo-complete {
+  0%   { background-color: transparent; }
+  30%  { background-color: hsl(var(--primary) / 0.15); }
+  100% { background-color: transparent; }
+}
+.animate-todo-complete { animation: todo-complete 700ms ease-out; }
+
+@keyframes slide-strikethrough {
+  from { background-size: 0% 1.5px; }
+  to   { background-size: 100% 1.5px; }
+}
+.todo-strike {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 50%;
+  background-repeat: no-repeat;
+  background-size: 100% 1.5px;
+  animation: slide-strikethrough 280ms ease-out;
+}
+
+@keyframes fade-slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-slide-in { animation: fade-slide-in 220ms ease-out; }
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@keyframes ring-fill {
+  from { stroke-dashoffset: var(--ring-circ); }
+  to   { stroke-dashoffset: var(--ring-target); }
+}
+.animate-ring-fill { animation: ring-fill 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.04); }
+}
+.animate-pulse-soft { animation: pulse-soft 2.2s ease-in-out infinite; }
+
+/* View Transitions API — smooth fade fuer Tab-Wechsel */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-checkbox-pop,
+  .animate-check-draw,
+  .animate-todo-complete,
+  .todo-strike,
+  .animate-fade-slide-in,
+  .animate-ring-fill,
+  .animate-pulse-soft { animation: none !important; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation-duration: 0ms; }
+}
