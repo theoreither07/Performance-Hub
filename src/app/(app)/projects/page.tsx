@@ -7,15 +7,10 @@ import { db } from "@/lib/db/dexie";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type LifeArea } from "@/types/domain";
 import { FolderKanban, Plus, User } from "lucide-react";
 import { ProjectDialog } from "@/components/projects/project-dialog";
-
-const areaBadge: Record<LifeArea, "priv" | "fh" | "biz"> = {
-  PRIVATE: "priv",
-  FH: "fh",
-  BUSINESS: "biz",
-};
+import { AREA_BADGE_VARIANT } from "@/lib/utils/area-badge";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -39,15 +34,15 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Projekte</h1>
-          <p className="text-muted-foreground text-sm mt-1">Klassifiziert nach Privat, FH und Business.</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Neues Projekt
-        </Button>
-      </div>
+      <PageHeader
+        title="Projekte"
+        subtitle="Klassifiziert nach Privat, FH und Business."
+        actions={
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Neues Projekt
+          </Button>
+        }
+      />
 
       <ProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 
@@ -72,7 +67,7 @@ export default function ProjectsPage() {
                     >
                       <FolderKanban className="h-5 w-5" style={{ color: p.color ?? "#aaff00" }} />
                     </div>
-                    <Badge variant={areaBadge[p.area]}>{p.area.toLowerCase()}</Badge>
+                    <Badge variant={AREA_BADGE_VARIANT[p.area]}>{p.area.toLowerCase()}</Badge>
                   </div>
                   <h3 className="font-semibold mt-3">{p.name}</h3>
                   {p.description && (

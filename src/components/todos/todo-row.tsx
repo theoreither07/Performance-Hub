@@ -10,22 +10,10 @@ import { de } from "@/lib/i18n/date-locale";
 import { db, type LocalTodo } from "@/lib/db/dexie";
 import { toggleTodoLocal } from "@/lib/sync/local-mutations";
 import { celebrateBig } from "@/lib/utils/celebrate";
-import type { LifeArea } from "@/types/domain";
 import { cn } from "@/lib/utils/cn";
+import { AREA_BADGE_VARIANT, AREA_LABEL } from "@/lib/utils/area-badge";
 import { TodoEditDialog } from "./todo-edit-dialog";
 import { ProjectPicker } from "./project-picker";
-
-const areaBadge: Record<LifeArea, "priv" | "fh" | "biz"> = {
-  PRIVATE: "priv",
-  FH: "fh",
-  BUSINESS: "biz",
-};
-
-const areaLabel: Record<LifeArea, string> = {
-  PRIVATE: "Privat",
-  FH: "FH",
-  BUSINESS: "Business",
-};
 
 function formatDuration(min?: number) {
   if (!min) return null;
@@ -111,7 +99,7 @@ export function TodoRow({ todo, showArea = true }: { todo: LocalTodo; showArea?:
           </Badge>
         )}
         {todo.priority === "HIGH" && <Badge variant="outline">Hoch</Badge>}
-        {showArea && <Badge variant={areaBadge[todo.area]}>{areaLabel[todo.area]}</Badge>}
+        {showArea && <Badge variant={AREA_BADGE_VARIANT[todo.area]}>{AREA_LABEL[todo.area]}</Badge>}
         <Button
           variant="ghost"
           size="icon"

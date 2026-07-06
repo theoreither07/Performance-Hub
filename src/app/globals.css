@@ -23,14 +23,15 @@
     --border: 240 6% 90%;
     --input: 240 6% 90%;
     --ring: 76 100% 50%;
-    --radius: 0.75rem;
+    --radius: 0.5rem;
   }
 
   .dark {
     --background: 0 0% 6%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 9%;
+    --card: 0 0% 10%;
     --card-foreground: 0 0% 98%;
+    --surface-2: 0 0% 13%;           /* nested/inset panels, one step above card */
     --popover: 0 0% 11%;             /* opake Dropdown-Flaeche, etwas heller als card */
     --popover-foreground: 0 0% 98%;
     --primary: 76 100% 50%;
@@ -55,6 +56,10 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3 {
+    @apply tracking-tight;
   }
 }
 

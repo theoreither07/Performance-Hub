@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Flame, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { STATUS_COLOR } from "@/components/charts";
 
 interface StreakDay { date: string; hit: boolean }
 interface StreakSummary {
@@ -89,10 +90,8 @@ function StreakRow({ streak }: { streak: StreakSummary }) {
           <div
             key={d.date}
             title={`${d.date} — ${d.hit ? "ok" : "nope"}`}
-            className={cn(
-              "h-3 flex-1 min-w-[6px] rounded-[2px]",
-              d.hit ? "bg-emerald-500/70" : "bg-muted/30",
-            )}
+            className={cn("h-3 flex-1 min-w-[6px] rounded-sm", !d.hit && "bg-muted/30")}
+            style={d.hit ? { background: STATUS_COLOR.good, opacity: 0.75 } : undefined}
           />
         ))}
       </div>

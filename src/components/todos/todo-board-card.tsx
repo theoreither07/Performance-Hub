@@ -11,13 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { db, type LocalTodo } from "@/lib/db/dexie";
 import { toggleTodoLocal } from "@/lib/sync/local-mutations";
 import { celebrateBig } from "@/lib/utils/celebrate";
-import type { LifeArea } from "@/types/domain";
 import { cn } from "@/lib/utils/cn";
+import { AREA_BADGE_VARIANT, AREA_LABEL } from "@/lib/utils/area-badge";
 import { TodoEditDialog } from "./todo-edit-dialog";
 import { ProjectPicker } from "./project-picker";
-
-const areaBadge: Record<LifeArea, "priv" | "fh" | "biz"> = { PRIVATE: "priv", FH: "fh", BUSINESS: "biz" };
-const areaLabel: Record<LifeArea, string> = { PRIVATE: "Privat", FH: "FH", BUSINESS: "Business" };
 
 interface Props {
   todo: LocalTodo;
@@ -57,7 +54,7 @@ export function TodoBoardCard({ todo, showArea = false, overlay = false, dimmed 
         ref={setNodeRef}
         style={style}
         className={cn(
-          "rounded-lg border border-border/60 bg-card p-2.5 shadow-sm",
+          "rounded-lg border border-border/60 bg-card p-2.5",
           "transition-shadow",
           isDragging && "opacity-30",
           dimmed && "opacity-30",
@@ -96,7 +93,7 @@ export function TodoBoardCard({ todo, showArea = false, overlay = false, dimmed 
             </Badge>
           )}
           {todo.priority === "HIGH" && <Badge variant="outline">Hoch</Badge>}
-          {showArea && <Badge variant={areaBadge[todo.area]}>{areaLabel[todo.area]}</Badge>}
+          {showArea && <Badge variant={AREA_BADGE_VARIANT[todo.area]}>{AREA_LABEL[todo.area]}</Badge>}
           {todo.dueDate && (
             <span className={cn("inline-flex items-center gap-1 text-xs text-muted-foreground", overdue && "font-medium text-destructive")}>
               <CalendarClock className="h-3 w-3" />

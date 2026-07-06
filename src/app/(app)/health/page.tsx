@@ -27,6 +27,7 @@ import { VitalityCard } from "@/components/health/vitality-card";
 import { PeriodizationCard } from "@/components/health/periodization-card";
 import { PacePredictorCard } from "@/components/health/pace-predictor-card";
 import { PaceHrTrendCard } from "@/components/health/pace-hr-trend-card";
+import { RunningTrendsCard } from "@/components/health/running-trends-card";
 import { HealthTabs, HealthTabsDesktop, type HealthTab } from "@/components/health/health-tabs";
 import { SyncFab } from "@/components/health/sync-fab";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
@@ -35,6 +36,8 @@ import { useToast } from "@/components/ui/toast";
 import { haptics } from "@/lib/ui/haptics";
 import { ChevronLeft, ChevronRight, NotebookPen, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { PageHeader } from "@/components/layout/page-header";
+import { TrendChart, PRIMARY_SERIES_COLOR } from "@/components/charts";
 
 interface HealthResponse {
   metrics: Record<string, { date: string; value: number; meta: unknown }[]>;
@@ -60,30 +63,6 @@ const KIND_LABELS: Record<string, string> = {
   calories: "Kalorien",
   training_readiness: "Training Readiness",
 };
-
-function chart(values: { date: string; value: number }[], color = "#AAFF00") {
-  if (values.length < 2) return null;
-  const W = 600;
-  const H = 60;
-  const min = Math.min(...values.map((v) => v.value));
-  const max = Math.max(...values.map((v) => v.value));
-  const range = max - min || 1;
-  const points = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * W;
-    const y = H - ((v.value - min) / range) * (H - 4) - 2;
-    return `${x},${y}`;
-  });
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-14">
-      <polyline points={points.join(" ")} fill="none" stroke={color} strokeWidth={1.5} />
-      {values.map((v, i) => {
-        const x = (i / (values.length - 1)) * W;
-        const y = H - ((v.value - min) / range) * (H - 4) - 2;
-        return <circle key={i} cx={x} cy={y} r={1.5} fill={color} />;
-      })}
-    </svg>
-  );
-}
 
 function dayLabel(date: Date): string {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -217,15 +196,11 @@ function HealthPageInner() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-end justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">Health & Training</h1>
-          <p className="text-muted-foreground text-sm mt-1 hidden sm:block">
-            Dein KI-Trainer — Bereitschaft, Erholung, Plan.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        className="mb-4"
+        title="Health & Training"
+        subtitle={<span className="hidden sm:inline">Dein KI-Trainer — Bereitschaft, Erholung, Plan.</span>}
+      />
 
       <HealthTabsDesktop active={activeTab} onChange={setActiveTab} />
 
@@ -321,6 +296,7 @@ function HealthPageInner() {
             <StreaksCard />
             <PacePredictorCard />
             <PaceHrTrendCard />
+            <RunningTrendsCard />
             <WeeklyInsights />
             <WorkoutsList days={7} title="Diese Woche" />
             <TodayMetrics />
@@ -336,7 +312,15 @@ function HealthPageInner() {
                       <CardTitle className="text-sm font-medium">{KIND_LABELS[kind] ?? kind}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {chart(values)}
+                      {values.length >= 2 && (
+                        <TrendChart
+                          data={values}
+                          series={[{ key: "value", label: KIND_LABELS[kind] ?? kind, color: PRIMARY_SERIES_COLOR }]}
+                          xKey="date"
+                          height={100}
+                          xTickFormatter={(d) => format(parseISO(d), "d.M.", { locale: de })}
+                        />
+                      )}
                       <div className="flex justify-between text-xs text-muted-foreground mt-1">
                         <span>{values.length > 0 ? format(parseISO(values[0].date), "d. MMM", { locale: de }) : ""}</span>
                         <span>Letzter: {values[values.length - 1]?.value.toFixed(1) ?? "—"}</span>

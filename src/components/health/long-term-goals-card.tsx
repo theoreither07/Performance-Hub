@@ -8,6 +8,7 @@ import { Plus, Target, Trash2, TrendingDown, TrendingUp, Trophy } from "lucide-r
 import { format, parseISO, differenceInDays } from "date-fns";
 import { de } from "@/lib/i18n/date-locale";
 import { cn } from "@/lib/utils/cn";
+import { PRIMARY_SERIES_COLOR, STATUS_COLOR } from "@/components/charts";
 
 // Mini-Sparkline mit Forecast-Line + IST-Linie.
 // Vergleicht aktuellen Trend gegen "muss-haben"-Linie (linear Start→Ziel).
@@ -76,14 +77,14 @@ function GoalTrajectory({
   return (
     <div className="flex items-center gap-2">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-20 h-5" preserveAspectRatio="none">
-        {forecast && <polyline points={forecast} fill="none" stroke="rgba(160,160,160,0.5)" strokeWidth={0.8} strokeDasharray="2 2" />}
-        <polyline points={actualPts} fill="none" stroke="#AAFF00" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" />
+        {forecast && <polyline points={forecast} fill="none" stroke="rgba(160,160,160,0.5)" strokeWidth={1} strokeDasharray="3 2" />}
+        <polyline points={actualPts} fill="none" stroke={PRIMARY_SERIES_COLOR} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       {status && (
-        <span className={cn(
-          "text-[9px] uppercase tracking-wider font-bold",
-          status === "track" ? "text-emerald-300" : status === "ahead" ? "text-emerald-400" : "text-amber-300",
-        )}>
+        <span
+          className="text-[9px] uppercase tracking-wider font-bold"
+          style={{ color: status === "behind" ? STATUS_COLOR.warning : STATUS_COLOR.good }}
+        >
           {status === "track" ? "on track" : status === "ahead" ? "ahead" : "behind"}
         </span>
       )}

@@ -3,8 +3,13 @@
 /**
  * Pace-vs-Puls-Trend — zeigt Laufoekonomie ueber Zeit: bei vergleichbarer
  * Anstrengung (Z1/Z2, HF < 81% MaxHF) sollte die Pace mit der Zeit schneller
- * werden bzw. die HF bei gleichem Tempo sinken. Zwei unabhaengig normalisierte
- * Linien (Pace + HF) ueber die letzten 60 Tage, im Stil der bestehenden Sparklines.
+ * werden bzw. die HF bei gleichem Tempo sinken.
+ *
+ * Zwei gestapelte Charts mit eigener (echter) Achse je Groesse, synchronisiert
+ * per syncId fuer gemeinsames Hover/Crosshair — kein Dual-Axis-Overlay mehr:
+ * Pace (min:km) und Puls (bpm) sind beide Werte, die ein Laeufer absolut lesen
+ * will (Renn-Pacing, HF-Zonen-Bewusstsein), Indexieren auf eine gemeinsame
+ * Basis wuerde genau diese Information wegwerfen.
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Activity } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { de } from "@/lib/i18n/date-locale";
+import { TrendChart, PRIMARY_SERIES_COLOR, CATEGORICAL_PALETTE } from "@/components/charts";
 
 interface Workout {
   date: string;
@@ -23,14 +29,13 @@ interface Workout {
 interface WorkoutsResponse { workouts: Workout[] }
 interface ProfileResponse { maxHr?: number | null }
 
+const HR_COLOR = CATEGORICAL_PALETTE[5]; // red — distinct from the lime pace line
+
 function paceFmt(secondsPerKm: number): string {
   const m = Math.floor(secondsPerKm / 60);
   const s = Math.round(secondsPerKm % 60);
   return `${m}:${String(s).padStart(2, "0")}/km`;
 }
-
-const PACE_COLOR = "#AAFF00";
-const HR_COLOR = "#FB7185";
 
 export function PaceHrTrendCard() {
   const workoutsQ = useQuery<WorkoutsResponse>({
@@ -64,34 +69,6 @@ export function PaceHrTrendCard() {
       hr: w.avgHr as number,
     }));
 
-  const chart = (() => {
-    if (points.length < 3) return null;
-    const W = 600, H = 90;
-    const paces = points.map((p) => p.paceSecKm);
-    const hrs = points.map((p) => p.hr);
-    const paceMin = Math.min(...paces), paceMax = Math.max(...paces);
-    const paceRange = paceMax - paceMin || 1;
-    const hrMin = Math.min(...hrs), hrMax = Math.max(...hrs);
-    const hrRange = hrMax - hrMin || 1;
-
-    // Pace invertiert: schnelleres (kleineres) sec/km -> Linie steigt nach oben.
-    const paceY = (v: number) => H - ((paceMax - v) / paceRange) * (H - 4) - 2;
-    const hrY = (v: number) => H - ((v - hrMin) / hrRange) * (H - 4) - 2;
-    const x = (i: number) => (i / (points.length - 1)) * W;
-
-    const pacePts = points.map((p, i) => `${x(i)},${paceY(p.paceSecKm)}`).join(" ");
-    const hrPts = points.map((p, i) => `${x(i)},${hrY(p.hr)}`).join(" ");
-
-    return (
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-24">
-        <polyline points={hrPts} fill="none" stroke={HR_COLOR} strokeWidth={1.5} opacity={0.85} strokeLinecap="round" strokeLinejoin="round" />
-        <polyline points={pacePts} fill="none" stroke={PACE_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((p, i) => <circle key={`hr-${i}`} cx={x(i)} cy={hrY(p.hr)} r={1.5} fill={HR_COLOR} />)}
-        {points.map((p, i) => <circle key={`pace-${i}`} cx={x(i)} cy={paceY(p.paceSecKm)} r={1.5} fill={PACE_COLOR} />)}
-      </svg>
-    );
-  })();
-
   return (
     <Card>
       <CardContent className="p-4 space-y-3">
@@ -102,22 +79,39 @@ export function PaceHrTrendCard() {
           <span className="text-[10px] text-muted-foreground">60d · Z1/Z2 · {points.length} Läufe</span>
         </div>
 
-        {chart ? (
+        {points.length >= 3 ? (
           <>
-            {chart}
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: PACE_COLOR }} />
-                Pace {paceFmt(points[0].paceSecKm)} → {paceFmt(points[points.length - 1].paceSecKm)}
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: HR_COLOR }} />
-                Puls {points[0].hr.toFixed(0)} → {points[points.length - 1].hr.toFixed(0)} bpm
-              </span>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Pace (min/km)</p>
+              <TrendChart
+                data={points}
+                series={[{ key: "paceSecKm", label: "Pace", color: PRIMARY_SERIES_COLOR }]}
+                xKey="date"
+                syncId="pace-hr"
+                height={110}
+                reverseY
+                hideXAxisLabels
+                yTickFormatter={(v) => paceFmt(v)}
+                valueFormatter={(v) => paceFmt(v)}
+                xTickFormatter={(d) => format(parseISO(d), "d.M.", { locale: de })}
+              />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Puls (bpm)</p>
+              <TrendChart
+                data={points}
+                series={[{ key: "hr", label: "Puls", color: HR_COLOR }]}
+                xKey="date"
+                syncId="pace-hr"
+                height={110}
+                unit=" bpm"
+                xTickFormatter={(d) => format(parseISO(d), "d.M.", { locale: de })}
+              />
             </div>
             <p className="text-[10px] text-muted-foreground">
               {format(parseISO(points[0].date), "d. MMM", { locale: de })} – {format(parseISO(points[points.length - 1].date), "d. MMM", { locale: de })}
-              {" · "}Pace steigt = schneller, Puls sinkt = ökonomischer
+              {" · "}Pace {paceFmt(points[0].paceSecKm)} → {paceFmt(points[points.length - 1].paceSecKm)}
+              {" · "}Puls {points[0].hr.toFixed(0)} → {points[points.length - 1].hr.toFixed(0)} bpm
             </p>
           </>
         ) : (

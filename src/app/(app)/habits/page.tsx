@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Sparkles } from "lucide-react";
 import { HabitCard, type HabitData } from "@/components/habits/habit-card";
 import { NewHabitDialog } from "@/components/habits/new-habit-dialog";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function HabitsPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -27,19 +28,19 @@ export default function HabitsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Habits</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {total > 0
-              ? `${doneCount} von ${total} heute erledigt${allDone ? " ✨" : ""}`
-              : "Bau dir deine Routinen auf."}
-          </p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Neuer Habit
-        </Button>
-      </div>
+      <PageHeader
+        title="Habits"
+        subtitle={
+          total > 0
+            ? `${doneCount} von ${total} heute erledigt${allDone ? " ✨" : ""}`
+            : "Bau dir deine Routinen auf."
+        }
+        actions={
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Neuer Habit
+          </Button>
+        }
+      />
 
       <NewHabitDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 

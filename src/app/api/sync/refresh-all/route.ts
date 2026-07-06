@@ -34,5 +34,8 @@ export async function POST() {
   invalidateHealthContext(user.id);
   triggered.push("health-context-cache");
 
-  return NextResponse.json({ ok: true, triggered, errors, at: new Date().toISOString() });
+  return NextResponse.json(
+    { ok: errors.length === 0, triggered, errors, at: new Date().toISOString() },
+    { status: errors.length === 0 ? 200 : 502 },
+  );
 }

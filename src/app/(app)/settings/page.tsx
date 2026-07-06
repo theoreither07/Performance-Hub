@@ -11,6 +11,7 @@ import { TrainingProfileForm } from "@/components/settings/training-profile-form
 import { KeyLiftsForm } from "@/components/settings/key-lifts-form";
 import { DataExport } from "@/components/settings/data-export";
 import { PushNotificationsCard } from "@/components/settings/push-notifications-card";
+import { PageHeader } from "@/components/layout/page-header";
 
 interface AccountStatus {
   email: string;
@@ -40,12 +41,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Einstellungen</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Verbinde Konten und konfiguriere Integrationen.
-        </p>
-      </div>
+      <PageHeader title="Einstellungen" subtitle="Verbinde Konten und konfiguriere Integrationen." />
 
       {error === "oauth_not_configured" && (
         <div className="bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-lg p-3 text-sm flex items-start gap-2">
