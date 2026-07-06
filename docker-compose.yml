@@ -39,6 +39,24 @@ services:
       timeout: 5s
       retries: 5
 
+  garmin-sync:
+    build: ./garmin-sync
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 512m
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://dashboard:${POSTGRES_PASSWORD}@postgres:5432/dashboard?schema=public
+      TZ: Europe/Vienna
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+    # Gleiches Volume wie app: /data/trigger-sync (Refresh-Button) + /data/garth (Token-Cache).
+    volumes:
+      - garmin-tokens:/data
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -96,8 +114,7 @@ volumes:
   postgres-data:
   caddy-data:
   caddy-config:
-  # Externes Volume — wird vom separat gestarteten dashboard-garmin-sync Container befuellt.
-  # Wenn das Volume noch nicht existiert (z.B. bei frischem Setup), `external: true` entfernen.
+  # Geteiltes Volume zwischen app + garmin-sync: /data/trigger-sync (Refresh-Button)
+  # und /data/garth (Garmin-Token-Cache).
   garmin-tokens:
-    external: true
     name: dashboard_garmin-tokens
