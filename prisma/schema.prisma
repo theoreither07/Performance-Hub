@@ -252,6 +252,38 @@ model GarminSyncRun {
   error     String?  @db.Text
 }
 
+// Ernaehrung pro Tag — von MyFitnessPal gesynct (inoffizielle Scraper-API, siehe mfp-sync/).
+// Single-User-Setup: keine userId, wie HealthMetric/WorkoutSession.
+model NutritionLog {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  calories  Float?
+  protein   Float?   // g
+  carbs     Float?   // g
+  fat       Float?   // g
+  sodium    Float?   // mg
+  sugar     Float?   // g
+  fiber     Float?   // g
+  water     Float?   // ml, falls in MFP getrackt
+  meals     Json?    // Roh-Breakdown pro Mahlzeit (Name, Kalorien) fuer Detail-Ansicht
+  source    String   @default("myfitnesspal")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+  @@index([date])
+}
+
+// Audit / Status fuer den MyFitnessPal-Sync.
+model MfpSyncRun {
+  id             Int      @id @default(autoincrement())
+  startedAt      DateTime @default(now())
+  finishedAt     DateTime?
+  success        Boolean  @default(false)
+  entriesWritten Int      @default(0)
+  error          String?  @db.Text
+}
+
 // Workouts / Trainings (Garmin Activities oder manuell eingetragen)
 model WorkoutSession {
   id              String   @id @default(cuid())

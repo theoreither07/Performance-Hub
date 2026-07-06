@@ -17,6 +17,7 @@ import { DailyGoalsCard } from "@/components/health/daily-goals-card";
 import { WeeklyPlanCard } from "@/components/health/weekly-plan-card";
 import { ManualWorkoutDialog } from "@/components/health/manual-workout-dialog";
 import { FoodVoiceCard } from "@/components/health/food-voice-card";
+import { CalorieBalanceCard } from "@/components/health/calorie-balance-card";
 import { LongTermGoalsCard } from "@/components/health/long-term-goals-card";
 import { TrainingsTodayCard } from "@/components/health/trainings-today-card";
 import { WeightCard } from "@/components/health/weight-card";
@@ -25,6 +26,7 @@ import { MorningRitualCard } from "@/components/health/morning-ritual-card";
 import { VitalityCard } from "@/components/health/vitality-card";
 import { PeriodizationCard } from "@/components/health/periodization-card";
 import { PacePredictorCard } from "@/components/health/pace-predictor-card";
+import { PaceHrTrendCard } from "@/components/health/pace-hr-trend-card";
 import { HealthTabs, HealthTabsDesktop, type HealthTab } from "@/components/health/health-tabs";
 import { SyncFab } from "@/components/health/sync-fab";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
@@ -309,6 +311,7 @@ function HealthPageInner() {
               defaultDate={selectedDate}
             />
             <div id="weight-card"><WeightCard /></div>
+            <CalorieBalanceCard />
             <div id="food-card"><FoodVoiceCard /></div>
           </>
         )}
@@ -317,6 +320,7 @@ function HealthPageInner() {
           <>
             <StreaksCard />
             <PacePredictorCard />
+            <PaceHrTrendCard />
             <WeeklyInsights />
             <WorkoutsList days={7} title="Diese Woche" />
             <TodayMetrics />

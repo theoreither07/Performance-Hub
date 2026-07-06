@@ -1,0 +1,12 @@
+# Hinweis Python 3.14 (Windows): myfitnesspal pinnt "lxml<6", aber lxml hat
+# fuer cp314 erst ab 6.1.1 ein vorgebautes Wheel (kein C-Compiler noetig).
+# Falls "pip install -r requirements.txt" deswegen fehlschlaegt:
+#   pip install "lxml>=6.1.1"
+#   pip install myfitnesspal==2.1.2 --no-deps
+#   pip install "blessed>=1.8.5,<2.0" "measurement>=3.2.0,<4.0" "requests>=2.17.0,<3" \
+#               "rich>=12,<13" "browser_cookie3>=0.16.1,<1" "cloudscraper>=1.2.71,<2" typing-extensions
+#   pip install psycopg2-binary python-dateutil==2.9.0.post0
+myfitnesspal>=2.1.0
+curl_cffi>=0.7
+psycopg2-binary>=2.9.10
+python-dateutil==2.9.0.post0
