@@ -6,13 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db/dexie";
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { de } from "@/lib/i18n/date-locale";
-import type { LifeArea } from "@/types/domain";
-
-const areaBadge: Record<LifeArea, "priv" | "fh" | "biz"> = {
-  PRIVATE: "priv",
-  FH: "fh",
-  BUSINESS: "biz",
-};
+import { AREA_BADGE_VARIANT } from "@/lib/utils/area-badge";
 
 export function UpcomingWidget() {
   const todos = useLiveQuery(async () => {
@@ -42,7 +36,7 @@ export function UpcomingWidget() {
               {format(new Date(t.dueDate!), "EEE, d. MMM", { locale: de })}
             </div>
             <div className="flex-1 text-sm truncate">{t.title}</div>
-            <Badge variant={areaBadge[t.area]}>{t.area.toLowerCase()}</Badge>
+            <Badge variant={AREA_BADGE_VARIANT[t.area]}>{t.area.toLowerCase()}</Badge>
           </div>
         ))}
       </CardContent>

@@ -12,6 +12,7 @@ import { Flame } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { de } from "@/lib/i18n/date-locale";
 import { cn } from "@/lib/utils/cn";
+import { TrendChart } from "@/components/charts";
 
 interface NutritionDay {
   date: string;
@@ -42,27 +43,6 @@ export function CalorieBalanceCard() {
   const withBoth = days.filter((d) => d.caloriesIn !== null && d.caloriesOut !== null);
   const latest = withBoth[withBoth.length - 1] ?? null;
 
-  const chart = (() => {
-    if (withBoth.length < 3) return null;
-    const W = 600, H = 90;
-    const all = withBoth.flatMap((d) => [d.caloriesIn as number, d.caloriesOut as number]);
-    const min = Math.min(...all), max = Math.max(...all);
-    const range = max - min || 1;
-    const y = (v: number) => H - ((v - min) / range) * (H - 4) - 2;
-    const x = (i: number) => (i / (withBoth.length - 1)) * W;
-
-    const inPts = withBoth.map((d, i) => `${x(i)},${y(d.caloriesIn as number)}`).join(" ");
-    const outPts = withBoth.map((d, i) => `${x(i)},${y(d.caloriesOut as number)}`).join(" ");
-
-    return (
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-24">
-        <polyline points={outPts} fill="none" stroke={OUT_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-        <polyline points={inPts} fill="none" stroke={IN_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-        {withBoth.map((d, i) => <circle key={`out-${i}`} cx={x(i)} cy={y(d.caloriesOut as number)} r={1.5} fill={OUT_COLOR} />)}
-        {withBoth.map((d, i) => <circle key={`in-${i}`} cx={x(i)} cy={y(d.caloriesIn as number)} r={1.5} fill={IN_COLOR} />)}
-      </svg>
-    );
-  })();
 
   return (
     <Card>
@@ -104,18 +84,22 @@ export function CalorieBalanceCard() {
               </div>
             )}
 
-            {chart && (
+            {withBoth.length >= 3 && (
               <>
-                {chart}
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: IN_COLOR }} /> Rein
-                  </span>
-                  <span>{format(parseISO(withBoth[0].date), "d. MMM", { locale: de })} – {format(parseISO(withBoth[withBoth.length - 1].date), "d. MMM", { locale: de })}</span>
-                  <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: OUT_COLOR }} /> Raus
-                  </span>
-                </div>
+                <TrendChart
+                  data={withBoth}
+                  series={[
+                    { key: "caloriesIn", label: "Rein", color: IN_COLOR },
+                    { key: "caloriesOut", label: "Raus", color: OUT_COLOR },
+                  ]}
+                  xKey="date"
+                  height={140}
+                  unit=" kcal"
+                  xTickFormatter={(d) => format(parseISO(d), "d.M.", { locale: de })}
+                />
+                <p className="text-[10px] text-muted-foreground text-right">
+                  {format(parseISO(withBoth[0].date), "d. MMM", { locale: de })} – {format(parseISO(withBoth[withBoth.length - 1].date), "d. MMM", { locale: de })}
+                </p>
               </>
             )}
             <p className="text-[10px] text-muted-foreground">

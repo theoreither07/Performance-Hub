@@ -27,6 +27,7 @@ import { CalendarFilter } from "@/components/calendar/calendar-filter";
 import { DayView } from "@/components/calendar/day-view";
 import { WeekView } from "@/components/calendar/week-view";
 import { MonthView } from "@/components/calendar/month-view";
+import { PageHeader } from "@/components/layout/page-header";
 
 type View = "day" | "week" | "month";
 
@@ -121,12 +122,7 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Kalender</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Termine aus deinem privaten Google-Kalender (Source of Truth) und optional einem Business-Konto.
-        </p>
-      </div>
+      <PageHeader title="Kalender" subtitle="Termine aus deinem privaten Google-Kalender (Source of Truth) und optional einem Business-Konto." />
 
       <CalendarFilter />
 

@@ -16,6 +16,7 @@ import { format, parseISO } from "date-fns";
 import { de } from "@/lib/i18n/date-locale";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
+import { PageHeader } from "@/components/layout/page-header";
 
 interface Recommendation {
   generatedAt: string;
@@ -150,19 +151,17 @@ export default function CoachPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Daily Coach</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {format(now, "EEEE, d. MMMM yyyy", { locale: de })} — was heute zu tun ist.
-          </p>
-        </div>
-        {reco?.generatedAt && (
-          <Badge variant="outline" className="text-[10px]">
-            Briefing {format(parseISO(reco.generatedAt), "HH:mm")}
-          </Badge>
-        )}
-      </div>
+      <PageHeader
+        title="Daily Coach"
+        subtitle={`${format(now, "EEEE, d. MMMM yyyy", { locale: de })} — was heute zu tun ist.`}
+        actions={
+          reco?.generatedAt && (
+            <Badge variant="outline" className="text-[10px]">
+              Briefing {format(parseISO(reco.generatedAt), "HH:mm")}
+            </Badge>
+          )
+        }
+      />
 
       {reco?.actionsNow ? (
         <Card className="border-primary/30 overflow-hidden">

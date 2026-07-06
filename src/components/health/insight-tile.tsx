@@ -6,6 +6,9 @@ import { haptics } from "@/lib/ui/haptics";
 import { type Insight, type Tone, sparklinePath } from "@/lib/health/insights";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { de } from "@/lib/i18n/date-locale";
+import { TrendChart, STATUS_COLOR, CATEGORICAL_PALETTE } from "@/components/charts";
 
 const TONE_BG: Record<Tone, string> = {
   good: "bg-emerald-500/10 border-emerald-500/30",
@@ -26,6 +29,13 @@ const TONE_STROKE: Record<Tone, string> = {
   neutral: "stroke-foreground/60",
   warn: "stroke-amber-400",
   info: "stroke-blue-400",
+};
+
+const TONE_HEX: Record<Tone, string> = {
+  good: STATUS_COLOR.good,
+  neutral: CATEGORICAL_PALETTE[0],
+  warn: STATUS_COLOR.warning,
+  info: CATEGORICAL_PALETTE[0],
 };
 
 interface InsightTileProps {
@@ -104,14 +114,19 @@ export function InsightTile({ insight, history, className }: InsightTileProps) {
                 </span>
               )}
             </div>
-            {path && (
+            {history.length >= 2 && (
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
                   Letzte 14 Tage
                 </p>
-                <svg viewBox="0 0 100 28" className="w-full h-12">
-                  <path d={path} fill="none" strokeWidth={1.8} className={TONE_STROKE[insight.tone]} />
-                </svg>
+                <TrendChart
+                  data={history.slice(-14)}
+                  series={[{ key: "value", label: insight.label, color: TONE_HEX[insight.tone] }]}
+                  xKey="date"
+                  height={120}
+                  unit={insight.unit ? ` ${insight.unit}` : ""}
+                  xTickFormatter={(d) => format(parseISO(d), "d.M.", { locale: de })}
+                />
               </div>
             )}
             <div className="border-t border-border/40 pt-3">

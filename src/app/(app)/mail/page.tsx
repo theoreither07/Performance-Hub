@@ -2,11 +2,9 @@
 
 import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import { MailList } from "@/components/mail/mail-list";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Filter } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 
 const FILTERS: { value: string; label: string; q: string }[] = [
   { value: "unread", label: "Ungelesen", q: "is:unread in:inbox" },
@@ -34,31 +32,17 @@ export default function MailPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Mail</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Aggregierte Inbox aus deinem privaten und (optional) Business-Google-Konto.
-        </p>
-      </div>
+      <PageHeader title="Mail" subtitle="Aggregierte Inbox aus deinem privaten und (optional) Business-Google-Konto." />
 
-      <Card>
-        <CardContent className="py-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            {FILTERS.map((f) => (
-              <Button
-                key={f.value}
-                size="sm"
-                variant={filter === f.value ? "default" : "outline"}
-                onClick={() => setFilter(f.value)}
-                className="h-7 text-xs"
-              >
-                {f.label}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs value={filter} onValueChange={setFilter}>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
+          {FILTERS.map((f) => (
+            <TabsTrigger key={f.value} value={f.value}>
+              {f.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <Tabs defaultValue="ALL">
         <TabsList>

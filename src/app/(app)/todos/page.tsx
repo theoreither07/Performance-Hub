@@ -16,6 +16,7 @@ import { TodoBoard } from "@/components/todos/todo-board";
 import { QuickAddDialog } from "@/components/dashboard/quick-add-dialog";
 import { cn } from "@/lib/utils/cn";
 import { startOfDay, endOfDay } from "date-fns";
+import { PageHeader } from "@/components/layout/page-header";
 
 type ExtraFilter = "today" | "overdue" | null;
 type ViewMode = "list" | "board";
@@ -199,26 +200,26 @@ function TodosPageInner() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">ToDos</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {extraFilter === "today"
-              ? "Aufgaben mit Faelligkeit heute."
-              : extraFilter === "overdue"
-                ? "Ueberfaellige Aufgaben."
-                : "Alle Aufgaben aus den drei Lebensbereichen."}
-          </p>
-        </div>
-        {extraFilter && (
-          <a
-            href="/todos"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border/40 rounded-md px-2.5 py-1"
-          >
-            <X className="h-3 w-3" /> Filter
-          </a>
-        )}
-      </div>
+      <PageHeader
+        title="ToDos"
+        subtitle={
+          extraFilter === "today"
+            ? "Aufgaben mit Faelligkeit heute."
+            : extraFilter === "overdue"
+              ? "Ueberfaellige Aufgaben."
+              : "Alle Aufgaben aus den drei Lebensbereichen."
+        }
+        actions={
+          extraFilter && (
+            <a
+              href="/todos"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border/40 rounded-md px-2.5 py-1"
+            >
+              <X className="h-3 w-3" /> Filter
+            </a>
+          )
+        }
+      />
       <Tabs defaultValue="ALL">
         <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="ALL">Alle</TabsTrigger>

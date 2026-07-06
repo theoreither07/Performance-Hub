@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { Scale, TrendingDown, TrendingUp } from "lucide-react";
 import { format, parseISO, subDays } from "date-fns";
+import { de } from "@/lib/i18n/date-locale";
 import { cn } from "@/lib/utils/cn";
+import { TrendChart, PRIMARY_SERIES_COLOR } from "@/components/charts";
 
 interface WeightEntry {
   date: string;
@@ -72,20 +74,8 @@ export function WeightCard() {
     return { delta: avgR - avgP, currentAvg: avgR };
   })();
 
-  // Mini-Sparkline (letzte 30d)
-  const sparklinePoints = (() => {
-    const entries = (list.data?.entries ?? []).slice(-30);
-    if (entries.length < 2) return null;
-    const W = 200, H = 30;
-    const values = entries.map((e) => e.weightKg);
-    const min = Math.min(...values), max = Math.max(...values);
-    const range = max - min || 1;
-    return entries.map((e, i) => {
-      const x = (i / (entries.length - 1)) * W;
-      const y = H - ((e.weightKg - min) / range) * (H - 4) - 2;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
-  })();
+  // Chart-Daten (letzte 30d)
+  const chartEntries = (list.data?.entries ?? []).slice(-30);
 
   const submit = () => {
     const n = parseFloat(draft.replace(",", "."));
@@ -129,11 +119,17 @@ export function WeightCard() {
           </Button>
         </div>
 
-        {sparklinePoints && (
+        {chartEntries.length >= 2 && (
           <div className="space-y-1">
-            <svg viewBox="0 0 200 30" className="w-full h-6" preserveAspectRatio="none">
-              <polyline points={sparklinePoints} fill="none" stroke="#AAFF00" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <TrendChart
+              data={chartEntries}
+              series={[{ key: "weightKg", label: "Gewicht", color: PRIMARY_SERIES_COLOR }]}
+              xKey="date"
+              height={120}
+              unit=" kg"
+              xTickFormatter={(d) => format(parseISO(d), "d.M.", { locale: de })}
+              yDomain={["dataMin", "dataMax"]}
+            />
             <p className="text-[10px] text-muted-foreground text-right">
               30d Trend · {(list.data?.entries.length ?? 0)} Eintraege
             </p>

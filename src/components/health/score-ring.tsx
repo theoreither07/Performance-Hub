@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
+import { STATUS_COLOR } from "@/components/charts";
 
 interface ScoreRingProps {
   value: number; // 0..100
@@ -16,11 +17,11 @@ interface ScoreRingProps {
   pulse?: boolean;
 }
 
-function autoStroke(value: number): string {
-  if (value >= 80) return "stroke-emerald-400";
-  if (value >= 60) return "stroke-amber-400";
-  if (value >= 40) return "stroke-orange-400";
-  return "stroke-red-400";
+function autoStrokeColor(value: number): string {
+  if (value >= 80) return STATUS_COLOR.good;
+  if (value >= 60) return STATUS_COLOR.warning;
+  if (value >= 40) return STATUS_COLOR.serious;
+  return STATUS_COLOR.critical;
 }
 
 export function ScoreRing({
@@ -37,7 +38,7 @@ export function ScoreRing({
   const c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(100, value));
   const offset = c - (clamped / 100) * c;
-  const colorClass = strokeClassName ?? autoStroke(clamped);
+  const autoColor = autoStrokeColor(clamped);
 
   return (
     <div
@@ -64,7 +65,8 @@ export function ScoreRing({
           fill="none"
           strokeWidth={stroke}
           strokeLinecap="round"
-          className={cn(colorClass, "transition-all duration-700 ease-out")}
+          className={cn(strokeClassName, "transition-all duration-700 ease-out")}
+          stroke={strokeClassName ? undefined : autoColor}
           strokeDasharray={c}
           strokeDashoffset={offset}
           style={{
